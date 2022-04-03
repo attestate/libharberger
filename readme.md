@@ -6,6 +6,18 @@
 
 #### [Installation](readme.md/#Installation) | [License](readme.md#License) | [Usage](readme.md#Usage)
 
+## Why use libharberger?
+
+- It allows straight-forward self-assessment of property with ERC20 stable
+  coins in e.g. DAI, RAI, USDC.
+- It has high test coverage and uses solmate's high-precision fixed-point
+  number arithmetic.
+- It implement's ERC721's Metadata interface extension but it's not an ERC721.
+  Wallets can hence still load any property like an ERC721 but detect that
+  transfers shall be disabled.
+- Implementing Harberger taxes as "deprecating licenses," this library
+  structurally minimizes gas costs for sales.
+
 ## Installation
 
 With [dapptools](https://github.com/dapphub/dapptools):
