@@ -81,17 +81,17 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
   function getAssessment(
     uint256 tokenId
   ) external view virtual returns (Assessment memory assessment) {
-    require(_exists(tokenId), "buy: token doesn't exist");
+    require(_exists(tokenId), "getAssessment: token doesn't exist");
     assessment = _assessments[tokenId];
   }
 
   function getPrice(
     uint256 tokenId
-  ) external view virtual returns (uint256 nextPrice) {
-    require(_exists(tokenId), "buy: token doesn't exist");
+  ) external view virtual returns (uint256 price) {
+    require(_exists(tokenId), "getPrice: token doesn't exist");
     Assessment memory assessment = _assessments[tokenId];
 
-    nextPrice = Harberger.getNextPrice(
+    price = Harberger.getNextPrice(
       assessment.taxRate,
       Period(assessment.startBlock, block.number),
       assessment.collateral
