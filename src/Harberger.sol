@@ -29,6 +29,7 @@ https://en.wikipedia.org/w/index.php?title=Parts-per_notation&oldid=1068959843
 struct Perwei {
   uint256 numerator;
   uint256 denominator;
+  address beneficiary;
 }
 
 struct Period {

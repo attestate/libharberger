@@ -103,6 +103,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     string calldata uri
   ) external payable virtual returns (uint256) {
     require(msg.value > 0, "mint: not enough ETH");
+    require(taxRate.beneficiary != address(0), "mint: beneficiary not set");
 
     uint256 tokenId = _tokenIds.current();
     _owners[tokenId] = msg.sender;
