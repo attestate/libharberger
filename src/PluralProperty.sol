@@ -122,7 +122,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     return tokenId;
   }
 
-  function _settleAssessment(
+  function _settleTaxes(
     uint256 tokenId
   ) internal virtual returns (Assessment memory, uint256) {
     Assessment memory assessment = getAssessment(tokenId);
@@ -132,18 +132,20 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
       assessment.collateral
     );
 
-    payable(assessment.seller).transfer(nextPrice);
     payable(assessment.taxRate.beneficiary).transfer(taxes);
 
     return (assessment, nextPrice);
   }
 
   function topup(uint256 tokenId) external virtual payable {
+    require(msg.value > 0, "topup: must send eth");
     (
       Assessment memory assessment,
       uint256 nextPrice
-    ) = _settleAssessment(tokenId);
-    require(assessment.seller == msg.sender, "topup: only seller can topup");
+    ) = _settleTaxes(tokenId);
+    require(msg.value > nextPrice, "topup: msg.value too low");
+    require(assessment.seller == msg.sender, "topup: only seller");
+
     Assessment memory nextAssessment = Assessment(
       msg.sender,
       block.number,
@@ -153,13 +155,36 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     _assessments[tokenId] = nextAssessment;
   }
 
-  function buy(
-    uint256 tokenId
-  ) external virtual payable {
+  function withdraw(uint256 tokenId, uint256 amount) external virtual {
     (
       Assessment memory assessment,
       uint256 nextPrice
-    ) = _settleAssessment(tokenId);
+    ) = _settleTaxes(tokenId);
+
+    require(assessment.seller == msg.sender, "withdraw: only seller");
+    require(amount <= nextPrice, "withdraw: amount too big");
+
+    Assessment memory nextAssessment = Assessment(
+      msg.sender,
+      block.number,
+      nextPrice - amount,
+      assessment.taxRate
+    );
+    _assessments[tokenId] = nextAssessment;
+
+    payable(assessment.seller).transfer(amount);
+  }
+
+  function buy(
+    uint256 tokenId
+  ) external virtual payable {
+    require(msg.value > 0, "buy: must send eth");
+    (
+      Assessment memory assessment,
+      uint256 nextPrice
+    ) = _settleTaxes(tokenId);
+    require(msg.value > nextPrice, "buy: msg.value too low");
+
     Assessment memory nextAssessment = Assessment(
       msg.sender,
       block.number,
@@ -170,5 +195,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
 
     _owners[tokenId] = msg.sender;
     emit Transfer(assessment.seller, msg.sender, tokenId);
+
+    payable(assessment.seller).transfer(nextPrice);
   }
 }

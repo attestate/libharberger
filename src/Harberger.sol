@@ -43,10 +43,8 @@ library Harberger {
     Perwei memory perwei,
     Period memory period,
     uint256 prevPrice
-  ) internal view returns (uint256 nextPrice, uint256 taxes) {
-    require(msg.value > 0, "must send eth");
+  ) internal pure returns (uint256 nextPrice, uint256 taxes) {
     (nextPrice, taxes) = Harberger.getNextPrice(perwei, period, prevPrice);
-    require(msg.value > nextPrice, "msg.value too low");
     require(taxes <= prevPrice, "taxes too high");
   }
 

@@ -22,28 +22,6 @@ contract HarbergerTest is DSTest {
     p = new PropertyMock();
   }
 
-  function testFailSendingTooLittleEther() public {
-    Perwei memory perwei1 = Perwei(1, 100, address(this));
-    Period memory period1 = Period(0, 1);
-    uint256 prevPrice = 1 ether;
-    p.pay{value: 0.98 ether}(
-      perwei1,
-      period1,
-      prevPrice
-    );
-  }
-
-  function testFailSendingNoEther() public {
-    Perwei memory perwei1 = Perwei(100, 100, address(this));
-    Period memory period1 = Period(0, 50);
-    uint256 prevPrice = 0;
-    p.pay(
-      perwei1,
-      period1,
-      prevPrice
-    );
-  }
-
   function testPayingNothing() public {
     Perwei memory perwei1 = Perwei(100, 100, address(this));
     Period memory period1 = Period(0, 50);

@@ -22,6 +22,15 @@ contract Buyer {
     HarbergerProperty prop = HarbergerProperty(propAddr);
     prop.topup{value: msg.value}(tokenId);
   }
+
+  function proxyWithdraw(
+    address propAddr,
+    uint256 tokenId,
+    uint256 amount
+  ) payable public {
+    HarbergerProperty prop = HarbergerProperty(propAddr);
+    prop.withdraw(tokenId, amount);
+  }
 }
 
 interface Vm {
@@ -155,6 +164,131 @@ contract PluralPropertyTest is DSTest {
 
     Buyer buyer = new Buyer();
     buyer.proxyTopup{value: 1.1 ether}(address(prop), tokenId0);
+  }
+
+  function testFailWithdrawingAsNonOwner() public {
+    uint256 startBlock = block.number;
+    uint256 collateral = 1 ether;
+    address beneficiary = address(1337);
+    Perwei memory taxRate = Perwei(1, 100, beneficiary);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+    Buyer buyer = new Buyer();
+    buyer.proxyWithdraw(address(prop), tokenId0, 0.01 ether);
+  }
+
+  function testFailWithdrawingTooMuch() public {
+    uint256 startBlock = block.number;
+    uint256 collateral = 1 ether;
+    address beneficiary = address(1337);
+    Perwei memory taxRate = Perwei(1, 100, beneficiary);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+    assertEq(tokenId0, 0);
+
+    assertEq(block.number, startBlock);
+    vm.roll(block.number + 50);
+    assertEq(block.number, startBlock + 50);
+
+    (uint256 nextPrice0, uint256 taxes0) = prop.getPrice(tokenId0);
+    assertEq(nextPrice0, 0.5 ether);
+    assertEq(taxes0, 0.5 ether);
+    assertEq(beneficiary.balance, 0);
+    uint256 balanceBeforeWithdraw = address(this).balance;
+    // collateral is: + 1 ether
+    //                - 0.5 ether taxes
+    //                ------------------
+    //                = 0.5 ether
+    uint256 amount = 0.51 ether;
+    prop.withdraw(tokenId0, amount);
+    // new            + 0.5 ether (after taxes)
+    //                - 0.51 ether from withdraw
+    //                --------------------------
+    //                = - 0.01 ether
+    //                should fail...
+  }
+
+  function testWithdrawingAll() public {
+    uint256 startBlock = block.number;
+    uint256 collateral = 1 ether;
+    address beneficiary = address(1337);
+    Perwei memory taxRate = Perwei(1, 100, beneficiary);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+    assertEq(tokenId0, 0);
+
+    assertEq(block.number, startBlock);
+    vm.roll(block.number + 50);
+    assertEq(block.number, startBlock + 50);
+
+    (uint256 nextPrice0, uint256 taxes0) = prop.getPrice(tokenId0);
+    assertEq(nextPrice0, 0.5 ether);
+    assertEq(taxes0, 0.5 ether);
+    assertEq(beneficiary.balance, 0);
+    uint256 balanceBeforeWithdraw = address(this).balance;
+    // collateral is: + 1 ether
+    //                - 0.5 ether taxes
+    //                ------------------
+    //                = 0.5 ether
+    uint256 amount = 0.5 ether;
+    prop.withdraw(tokenId0, amount);
+    // new            + 0.5 ether (after taxes)
+    //                - 0.5 ether from withdraw
+    //                --------------------------
+    //                = 0 ether
+    assertEq(beneficiary.balance, 0.5 ether);
+    assertEq(address(prop).balance, 0);
+    assertEq(balanceBeforeWithdraw + amount, address(this).balance);
+    (uint256 nextPrice1, uint256 taxes1) = prop.getPrice(tokenId0);
+    assertEq(nextPrice1, 0);
+    assertEq(taxes1, 0);
+  }
+
+  function testWithdrawingFromProperty() public {
+    uint256 startBlock = block.number;
+    uint256 collateral = 1 ether;
+    address beneficiary = address(1337);
+    Perwei memory taxRate = Perwei(1, 100, beneficiary);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+    assertEq(tokenId0, 0);
+
+    assertEq(block.number, startBlock);
+    vm.roll(block.number + 50);
+    assertEq(block.number, startBlock + 50);
+
+    (uint256 nextPrice0, uint256 taxes0) = prop.getPrice(tokenId0);
+    assertEq(nextPrice0, 0.5 ether);
+    assertEq(taxes0, 0.5 ether);
+    assertEq(beneficiary.balance, 0);
+    uint256 balanceBeforeWithdraw = address(this).balance;
+    // collateral is: + 1 ether
+    //                - 0.5 ether taxes
+    //                ------------------
+    //                = 0.5 ether
+    uint256 amount = 0.4 ether;
+    prop.withdraw(tokenId0, amount);
+    // new            + 0.5 ether (after taxes)
+    //                - 0.4 ether from withdraw
+    //                --------------------------
+    //                = 0.1 ether
+    assertEq(beneficiary.balance, 0.5 ether);
+    assertEq(balanceBeforeWithdraw + amount, address(this).balance);
+    (uint256 nextPrice1, uint256 taxes1) = prop.getPrice(tokenId0);
+    assertEq(nextPrice1, 0.1 ether);
+    assertEq(taxes1, 0);
   }
 
   function testToppingUpProperty() public {
