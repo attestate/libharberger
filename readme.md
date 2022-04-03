@@ -8,8 +8,6 @@
 
 ## Why use libharberger?
 
-- It allows straight-forward self-assessment of property with ERC20 stable
-  coins in e.g. DAI, RAI, USDC.
 - It has high test coverage and uses solmate's high-precision fixed-point
   number arithmetic.
 - It implement's ERC721's Metadata interface extension but it's not an ERC721.
