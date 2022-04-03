@@ -59,9 +59,9 @@ contract PluralPropertyTest is DSTest {
 
   function testBuyAndChangingOwner() public {
     uint256 startBlock = block.number;
-    uint256 startPrice = 1 ether;
+    uint256 collateral = 1 ether;
     Perwei memory taxRate = Perwei(1, 100);
-    uint256 tokenId = prop.mint{value: startPrice}(
+    uint256 tokenId = prop.mint{value: collateral}(
       taxRate,
       "https://example.com/metadata.json"
     );
@@ -81,9 +81,9 @@ contract PluralPropertyTest is DSTest {
   }
 
   function testFailBuyWithFalsePrice() public {
-    uint256 startPrice = 1 ether;
+    uint256 collateral = 1 ether;
     Perwei memory taxRate = Perwei(1, 100);
-    uint256 tokenId0 = prop.mint{value: startPrice}(
+    uint256 tokenId0 = prop.mint{value: collateral}(
       taxRate,
       "https://example.com/metadata.json"
     );
@@ -116,16 +116,16 @@ contract PluralPropertyTest is DSTest {
   }
 
   function testMintProperty() public {
-    uint256 startPrice = 1 ether;
+    uint256 collateral = 1 ether;
     Perwei memory taxRate = Perwei(1, 100);
     string memory uri = "https://example.com/metadata.json";
-    uint256 tokenId0 = prop.mint{value: startPrice}(
+    uint256 tokenId0 = prop.mint{value: collateral}(
       taxRate,
       uri
     );
     assertEq(tokenId0, 0);
 
-    uint256 tokenId1 = prop.mint{value: startPrice}(
+    uint256 tokenId1 = prop.mint{value: collateral}(
       taxRate,
       uri
     );
@@ -134,10 +134,10 @@ contract PluralPropertyTest is DSTest {
 
   function testGettingAssessment() public {
     uint256 startBlock = block.number;
-    uint256 startPrice = 1 ether;
+    uint256 collateral = 1 ether;
     Perwei memory taxRate = Perwei(1, 100);
     string memory uri = "https://example.com/metadata.json";
-    uint256 tokenId0 = prop.mint{value: startPrice}(
+    uint256 tokenId0 = prop.mint{value: collateral}(
       taxRate,
       uri
     );
@@ -145,23 +145,23 @@ contract PluralPropertyTest is DSTest {
     Assessment memory assessment = prop.getAssessment(tokenId0);
     assertEq(assessment.seller, address(this));
     assertEq(assessment.startBlock, startBlock);
-    assertEq(assessment.startPrice, startPrice);
+    assertEq(assessment.collateral, collateral);
     assertEq(assessment.taxRate.numerator, taxRate.numerator);
     assertEq(assessment.taxRate.denominator, taxRate.denominator);
   }
 
   function testMintAndCheckPrice() public {
     uint256 startBlock = block.number;
-    uint256 startPrice = 1 ether;
+    uint256 collateral = 1 ether;
     Perwei memory taxRate = Perwei(1, 100);
     string memory uri = "https://example.com/metadata.json";
-    uint256 tokenId0 = prop.mint{value: startPrice}(
+    uint256 tokenId0 = prop.mint{value: collateral}(
       taxRate,
       uri
     );
 
     assertEq(startBlock, block.number);
-    assertEq(prop.getPrice(tokenId0), startPrice);
+    assertEq(prop.getPrice(tokenId0), collateral);
 
     vm.roll(block.number+1);
     assertEq(startBlock+1, block.number);
@@ -174,16 +174,16 @@ contract PluralPropertyTest is DSTest {
 
   function testGivingAwayOldProperty() public {
     uint256 startBlock = block.number;
-    uint256 startPrice = 1 ether;
+    uint256 collateral = 1 ether;
     Perwei memory taxRate = Perwei(1, 100);
     string memory uri = "https://example.com/metadata.json";
-    uint256 tokenId0 = prop.mint{value: startPrice}(
+    uint256 tokenId0 = prop.mint{value: collateral}(
       taxRate,
       uri
     );
 
     assertEq(startBlock, block.number);
-    assertEq(prop.getPrice(tokenId0), startPrice);
+    assertEq(prop.getPrice(tokenId0), collateral);
 
     vm.roll(block.number+99);
     assertEq(startBlock+99, block.number);

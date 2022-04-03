@@ -13,7 +13,7 @@ import {Perwei, Period, Harberger} from "./Harberger.sol";
 struct Assessment {
   address seller;
   uint256 startBlock;
-  uint256 startPrice;
+  uint256 collateral;
   Perwei taxRate;
 }
 
@@ -53,6 +53,16 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     return _symbol;
   }
 
+  function _exists(uint256 tokenId) internal view virtual returns (bool) {
+    return _owners[tokenId] != address(0);
+  }
+
+  function ownerOf(uint256 tokenId) public view virtual returns (address) {
+    address owner = _owners[tokenId];
+    require(owner != address(0), "ownerOf: token doesn't exist");
+    return owner;
+  }
+
   function tokenURI(
     uint256 tokenId
   ) public view virtual override returns (string memory) {
@@ -66,16 +76,6 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
   ) internal virtual {
     require(_exists(_tokenId), "_setTokenURI: token doesn't exist");
     _tokenURIs[_tokenId] = _tokenURI;
-  }
-
-  function _exists(uint256 tokenId) internal view virtual returns (bool) {
-    return _owners[tokenId] != address(0);
-  }
-
-  function ownerOf(uint256 tokenId) public view virtual returns (address) {
-    address owner = _owners[tokenId];
-    require(owner != address(0), "ownerOf: token doesn't exist");
-    return owner;
   }
 
   function getAssessment(
@@ -94,7 +94,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     nextPrice = Harberger.getNextPrice(
       assessment.taxRate,
       Period(assessment.startBlock, block.number),
-      assessment.startPrice
+      assessment.collateral
     );
   }
 
@@ -130,7 +130,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     uint256 nextPrice = Harberger.pay(
       assessment.taxRate,
       Period(assessment.startBlock, block.number),
-      assessment.startPrice
+      assessment.collateral
     );
 
     payable(assessment.seller).transfer(nextPrice);
