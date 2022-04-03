@@ -45,11 +45,11 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
       super.supportsInterface(interfaceId);
   }
 
-  function name() public view virtual override returns (string memory) {
+  function name() external view virtual override returns (string memory) {
     return _name;
   }
 
-  function symbol() public view virtual override returns (string memory) {
+  function symbol() external view virtual override returns (string memory) {
     return _symbol;
   }
 
@@ -57,7 +57,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     return _owners[tokenId] != address(0);
   }
 
-  function ownerOf(uint256 tokenId) public view virtual returns (address) {
+  function ownerOf(uint256 tokenId) external view virtual returns (address) {
     address owner = _owners[tokenId];
     require(owner != address(0), "ownerOf: token doesn't exist");
     return owner;
@@ -65,7 +65,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
 
   function tokenURI(
     uint256 tokenId
-  ) public view virtual override returns (string memory) {
+  ) external view virtual override returns (string memory) {
     require(_exists(tokenId), "tokenURI: token doesn't exist");
     return _tokenURIs[tokenId];
   }
