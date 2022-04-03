@@ -5,7 +5,7 @@ import {DSTest} from "ds-test/test.sol";
 import {IERC165} from "openzeppelin-contracts/utils/introspection/IERC165.sol";
 
 import {IERC721Metadata} from "./interfaces/IERC721Metadata.sol";
-import {PluralProperty} from "./PluralProperty.sol";
+import {PluralProperty, Assessment} from "./PluralProperty.sol";
 import {Perwei} from "./Harberger.sol";
 
 contract HarbergerProperty is PluralProperty {
@@ -19,8 +19,13 @@ contract Buyer {
   }
 }
 
+interface Vm {
+  function roll(uint x) external;
+}
+
 contract PluralPropertyTest is DSTest {
   HarbergerProperty prop;
+  Vm vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
   function setUp() public {
     prop = new HarbergerProperty();
@@ -125,6 +130,72 @@ contract PluralPropertyTest is DSTest {
       uri
     );
     assertEq(tokenId1, 1);
+  }
+
+  function testGettingAssessment() public {
+    uint256 startBlock = block.number;
+    uint256 startPrice = 1 ether;
+    Perwei memory taxRate = Perwei(1, 100);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: startPrice}(
+      taxRate,
+      uri
+    );
+
+    Assessment memory assessment = prop.getAssessment(tokenId0);
+    assertEq(assessment.seller, address(this));
+    assertEq(assessment.startBlock, startBlock);
+    assertEq(assessment.startPrice, startPrice);
+    assertEq(assessment.taxRate.numerator, taxRate.numerator);
+    assertEq(assessment.taxRate.denominator, taxRate.denominator);
+  }
+
+  function testMintAndCheckPrice() public {
+    uint256 startBlock = block.number;
+    uint256 startPrice = 1 ether;
+    Perwei memory taxRate = Perwei(1, 100);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: startPrice}(
+      taxRate,
+      uri
+    );
+
+    assertEq(startBlock, block.number);
+    assertEq(prop.getPrice(tokenId0), startPrice);
+
+    vm.roll(block.number+1);
+    assertEq(startBlock+1, block.number);
+    assertEq(prop.getPrice(tokenId0), 0.99 ether);
+
+    vm.roll(block.number+1);
+    assertEq(startBlock+2, block.number);
+    assertEq(prop.getPrice(tokenId0), 0.98 ether);
+  }
+
+  function testGivingAwayOldProperty() public {
+    uint256 startBlock = block.number;
+    uint256 startPrice = 1 ether;
+    Perwei memory taxRate = Perwei(1, 100);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: startPrice}(
+      taxRate,
+      uri
+    );
+
+    assertEq(startBlock, block.number);
+    assertEq(prop.getPrice(tokenId0), startPrice);
+
+    vm.roll(block.number+99);
+    assertEq(startBlock+99, block.number);
+    assertEq(prop.getPrice(tokenId0), 0.01 ether);
+
+    vm.roll(block.number+1);
+    assertEq(startBlock+100, block.number);
+    assertEq(prop.getPrice(tokenId0), 0);
+
+    vm.roll(block.number+1);
+    assertEq(startBlock+101, block.number);
+    assertEq(prop.getPrice(tokenId0), 0);
   }
 }
 
