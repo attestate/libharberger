@@ -65,7 +65,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     return _owners[tokenId] != address(0);
   }
 
-  function ownerOf(uint256 tokenId) public view returns (address) {
+  function ownerOf(uint256 tokenId) public view virtual returns (address) {
     address owner = _owners[tokenId];
     require(owner != address(0), "ownerOf: token doesn't exist");
     return owner;
@@ -74,7 +74,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
   function mint(
     Perwei memory taxRate,
     string calldata uri
-  ) external payable returns (uint256) {
+  ) external payable virtual returns (uint256) {
     require(msg.value > 0, "mint: not enough ETH");
 
     uint256 tokenId = _tokenIds.current();
@@ -96,7 +96,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
 
   function buy(
     uint256 tokenId
-  ) external payable {
+  ) external virtual payable {
     Assessment memory assessment = _assessments[tokenId];
     require(_exists(tokenId), "buy: token doesn't exist");
 
