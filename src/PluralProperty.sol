@@ -37,7 +37,9 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     _symbol = symbol_;
   }
 
-  function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165) returns (bool) {
+  function supportsInterface(
+    bytes4 interfaceId
+  ) public view virtual override(ERC165) returns (bool) {
     return
       interfaceId == type(IERC721Metadata).interfaceId ||
       super.supportsInterface(interfaceId);
@@ -51,12 +53,17 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     return _symbol;
   }
 
-  function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+  function tokenURI(
+    uint256 tokenId
+  ) public view virtual override returns (string memory) {
     require(_exists(tokenId), "tokenURI: token doesn't exist");
     return _tokenURIs[tokenId];
   }
 
-  function _setTokenURI(uint256 _tokenId, string memory _tokenURI) internal virtual {
+  function _setTokenURI(
+    uint256 _tokenId,
+    string memory _tokenURI
+  ) internal virtual {
     require(_exists(_tokenId), "_setTokenURI: token doesn't exist");
     _tokenURIs[_tokenId] = _tokenURI;
   }
@@ -97,8 +104,8 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
   function buy(
     uint256 tokenId
   ) external virtual payable {
-    Assessment memory assessment = _assessments[tokenId];
     require(_exists(tokenId), "buy: token doesn't exist");
+    Assessment memory assessment = _assessments[tokenId];
 
     uint256 nextPrice = Harberger.pay(
       assessment.taxRate,
