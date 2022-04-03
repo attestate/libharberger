@@ -43,47 +43,25 @@ library Harberger {
     Perwei memory perwei,
     Period memory period,
     uint256 prevPrice
-  ) internal view returns (uint256 nextPrice) {
+  ) internal view returns (uint256 nextPrice, uint256 taxes) {
     require(msg.value > 0, "must send eth");
-    nextPrice = Harberger.getNextPrice(perwei, period, prevPrice);
+    (nextPrice, taxes) = Harberger.getNextPrice(perwei, period, prevPrice);
     require(msg.value > nextPrice, "msg.value too low");
-  }
-
-  function increase(
-    Perwei memory perwei,
-    Period memory period,
-    address owner,
-    uint256 prevPrice
-  ) internal view returns (uint256 nextPrice) {
-    require(msg.value > 0, "must send eth");
-    require(owner == msg.sender, "only owner");
-    nextPrice = Harberger.getNextPrice(perwei, period, prevPrice) + msg.value;
-  }
-
-  function decrease(
-    Perwei memory perwei,
-    Period memory period,
-    uint256 prevPrice,
-    address owner,
-    uint256 amount
-  ) internal view returns (uint256 nextPrice) {
-    require(owner != address(0), "owner is zero addr");
-    require(owner == msg.sender, "only owner");
-    nextPrice = Harberger.getNextPrice(perwei, period, prevPrice) - amount;
+    require(taxes <= prevPrice, "taxes too high");
   }
 
   function getNextPrice(
     Perwei memory perwei,
     Period memory period,
     uint256 price
-  ) internal pure returns (uint256) {
-    uint256 tax = taxPerBlock(perwei, period, price);
-    int256 diff = int256(price) - int256(tax);
+  ) internal pure returns (uint256, uint256) {
+    uint256 taxes = taxPerBlock(perwei, period, price);
+    int256 diff = int256(price) - int256(taxes);
 
     if (diff <= 0) {
-      return 0;
+      return (0, price);
     } else {
-      return uint256(diff);
+      return (uint256(diff), taxes);
     }
   }
 

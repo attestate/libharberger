@@ -10,17 +10,8 @@ contract PropertyMock {
     Perwei memory perwei,
     Period memory period,
     uint256 prevPrice
-  ) external payable returns (uint256 nextPrice) {
+  ) external payable returns (uint256 nextPrice, uint256 taxes) {
     return Harberger.pay(perwei, period, prevPrice);
-  }
-
-  function increase(
-    Perwei memory perwei,
-    Period memory period,
-    address owner,
-    uint256 prevPrice
-  ) external payable returns (uint256 nextPrice) {
-    return Harberger.increase(perwei, period, owner, prevPrice);
   }
 }
 
@@ -29,75 +20,6 @@ contract HarbergerTest is DSTest {
 
   function setUp() public {
     p = new PropertyMock();
-  }
-
-  function testFailDecreasingAsNonAuthorizedOwner() public {
-    Perwei memory perwei1 = Perwei(1, 100, address(this));
-    Period memory period1 = Period(0, 1);
-    uint256 prevPrice = 1 ether;
-    uint256 amount = 0.09 ether;
-
-    uint256 nextPrice = Harberger.decrease(
-      perwei1,
-      period1,
-      prevPrice,
-      address(0),
-      amount
-    );
-    assertEq(nextPrice, 0.9 ether);
-  }
-
-  function testDecreasingPrice() public {
-    Perwei memory perwei1 = Perwei(1, 100, address(this));
-    Period memory period1 = Period(0, 1);
-    uint256 prevPrice = 1 ether;
-    uint256 amount = 0.09 ether;
-
-    uint256 nextPrice = Harberger.decrease(
-      perwei1,
-      period1,
-      prevPrice,
-      msg.sender,
-      amount
-    );
-    assertEq(nextPrice, 0.9 ether);
-  }
-
-  function testFailIncreasePriceWithNoValue() public {
-    Perwei memory perwei1 = Perwei(1, 100, address(this));
-    Period memory period1 = Period(0, 1);
-    uint256 prevPrice = 1 ether;
-    p.increase(
-      perwei1,
-      period1,
-      address(this),
-      prevPrice
-    );
-  }
-
-  function testFailIncreasePriceWithNonAuthorizedUser() public {
-    Perwei memory perwei1 = Perwei(1, 100, address(this));
-    Period memory period1 = Period(0, 1);
-    uint256 prevPrice = 1 ether;
-    p.increase{value: 1}(
-      perwei1,
-      period1,
-      address(0),
-      prevPrice
-    );
-  }
-
-  function testIncreasePrice() public {
-    Perwei memory perwei1 = Perwei(1, 100, address(this));
-    Period memory period1 = Period(0, 1);
-    uint256 prevPrice = 1 ether;
-    uint256 nextPrice = p.increase{value: 1}(
-      perwei1,
-      period1,
-      address(this),
-      prevPrice
-    );
-    assertEq(nextPrice, 0.990000000000000001 ether);
   }
 
   function testFailSendingTooLittleEther() public {
@@ -126,25 +48,27 @@ contract HarbergerTest is DSTest {
     Perwei memory perwei1 = Perwei(100, 100, address(this));
     Period memory period1 = Period(0, 50);
     uint256 prevPrice = 0;
-    uint256 nextPrice = p.pay{value: 1}(
+    (uint256 nextPrice, uint256 taxes) = p.pay{value: 1}(
       perwei1,
       period1,
       prevPrice
     );
     assertEq(nextPrice, 0);
+    assertEq(taxes, 0);
   }
 
   function testPaying() public {
     Perwei memory perwei1 = Perwei(1, 100, address(this));
     Period memory period1 = Period(0, 1);
     uint256 prevPrice = 1 ether;
-    uint256 nextPrice = p.pay{value: 0.991 ether}(
+    (uint256 nextPrice, uint256 taxes) = p.pay{value: 0.991 ether}(
       perwei1,
       period1,
       prevPrice
     );
 
     assertEq(nextPrice, 0.99 ether);
+    assertEq(taxes, 0.01 ether);
   }
 
   function testPriceZero() public {
@@ -152,12 +76,13 @@ contract HarbergerTest is DSTest {
     Perwei memory perwei1 = Perwei(100, 100, address(this));
 
     uint256 price = 0;
-    uint256 nextPrice = Harberger.getNextPrice(
+    (uint256 nextPrice, uint256 taxes) = Harberger.getNextPrice(
       perwei1,
       period1,
       price
     );
     assertEq(nextPrice, 0);
+    assertEq(taxes, 0);
   }
 
   function testUsedBuffer() public {
@@ -165,12 +90,13 @@ contract HarbergerTest is DSTest {
     Perwei memory perwei1 = Perwei(1, 100, address(this));
     uint256 price = 1 ether;
 
-    uint256 nextPrice = Harberger.getNextPrice(
+    (uint256 nextPrice, uint256 taxes) = Harberger.getNextPrice(
       perwei1,
       period1,
       price
     );
     assertEq(nextPrice, 0.5 ether);
+    assertEq(taxes, 0.5 ether);
   }
 
   function testLowerPrice() public {
@@ -178,12 +104,13 @@ contract HarbergerTest is DSTest {
     Perwei memory perwei1= Perwei(1, 100, address(this));
     uint256 price = 1 ether;
 
-    uint256 nextPrice = Harberger.getNextPrice(
+    (uint256 nextPrice, uint256 taxes) = Harberger.getNextPrice(
       perwei1,
       period1,
       price
     );
     assertEq(nextPrice, 0.49 ether);
+    assertEq(taxes, 0.51 ether);
   }
 
   function testConsumingTotalPrice() public {
@@ -191,12 +118,13 @@ contract HarbergerTest is DSTest {
     Perwei memory perwei1 = Perwei(1, 100, address(this));
     uint256 price = 1 ether;
 
-    uint256 nextPrice = Harberger.getNextPrice(
+    (uint256 nextPrice, uint256 taxes) = Harberger.getNextPrice(
       perwei1,
       period1,
       price
     );
     assertEq(nextPrice, 0);
+    assertEq(taxes, 1 ether);
   }
 
   function testGettingNextPrice() public {
@@ -204,12 +132,13 @@ contract HarbergerTest is DSTest {
     Perwei memory perwei1 = Perwei(1, 100, address(this));
     uint256 price = 1 ether;
 
-    uint256 nextPrice = Harberger.getNextPrice(
+    (uint256 nextPrice, uint256 taxes) = Harberger.getNextPrice(
       perwei1,
       period1,
       price
     );
     assertEq(nextPrice, 0.99 ether);
+    assertEq(taxes, 0.01 ether);
   }
 
   function testBlockTax() public {

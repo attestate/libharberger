@@ -13,9 +13,14 @@ contract HarbergerProperty is PluralProperty {
 }
 
 contract Buyer {
-  function proxyBuy(address propAddr,uint256 tokenId) payable public {
+  function proxyBuy(address propAddr, uint256 tokenId) payable public {
     HarbergerProperty prop = HarbergerProperty(propAddr);
     prop.buy{value: msg.value}(tokenId);
+  }
+
+  function proxyTopup(address propAddr, uint256 tokenId) payable public {
+    HarbergerProperty prop = HarbergerProperty(propAddr);
+    prop.topup{value: msg.value}(tokenId);
   }
 }
 
@@ -60,29 +65,44 @@ contract PluralPropertyTest is DSTest {
   function testBuyAndChangingOwner() public {
     uint256 startBlock = block.number;
     uint256 collateral = 1 ether;
-    Perwei memory taxRate = Perwei(1, 100, address(this));
+    address beneficiary = address(1337);
+    Perwei memory taxRate = Perwei(1, 100, beneficiary);
     uint256 tokenId = prop.mint{value: collateral}(
       taxRate,
       "https://example.com/metadata.json"
     );
     assertEq(prop.ownerOf(tokenId), address(this));
 
-    uint256 firstBalance = address(this).balance;
+    assertEq(beneficiary.balance, 0);
+    assertEq(startBlock, block.number);
+    vm.roll(block.number+10);
+    assertEq(startBlock+10, block.number);
 
+    (uint256 nextPrice, uint256 taxes) = prop.getPrice(tokenId);
+    assertEq(nextPrice, 0.9 ether);
+    assertEq(taxes, 0.1 ether);
+
+    uint256 originalBalance = address(this).balance - 1 ether;
     Buyer buyer = new Buyer();
-    buyer.proxyBuy{value: 1.1 ether}(address(prop), tokenId);
+    buyer.proxyBuy{value: 1 ether}(address(prop), tokenId);
     assertEq(prop.ownerOf(tokenId), address(buyer));
+    assertEq(beneficiary.balance, 0.1 ether);
+    assertEq(address(this).balance - originalBalance, 0.9 ether);
 
-    uint256 secondBalance = address(this).balance;
-    uint256 endBlock = block.number;
-    assertEq(endBlock-startBlock, 0);
-    assertEq(firstBalance-secondBalance, 0.1 ether);
-    assertEq(address(prop).balance, 1.1 ether);
+    (uint256 nextPrice1, uint256 taxes1) = prop.getPrice(tokenId);
+    assertEq(nextPrice1, 1 ether);
+    assertEq(taxes1, 0);
+
+    //uint256 secondBalance = address(this).balance;
+    //uint256 endBlock = block.number;
+    //assertEq(endBlock-startBlock, 0);
+    //assertEq(firstBalance-secondBalance, 0.1 ether);
+    //assertEq(address(prop).balance, 1.1 ether);
   }
 
   function testFailMintWithUndefinedBenificiary() public {
     Perwei memory taxRate = Perwei(1, 100, address(0));
-    uint256 tokenId0 = prop.mint{value: 1 ether}(
+    prop.mint{value: 1 ether}(
       taxRate,
       "https://example.com/metadata.json"
     );
@@ -121,6 +141,84 @@ contract PluralPropertyTest is DSTest {
 
   function testFailMintWithoutValue() public {
     prop.mint(Perwei(0, 0, address(this)), "https://example.com/metadata.json");
+  }
+
+  function testFailToppingUpAsNonOwner() public {
+    uint256 collateral = 1 ether;
+    address beneficiary = address(1337);
+    Perwei memory taxRate = Perwei(1, 100, beneficiary);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+
+    Buyer buyer = new Buyer();
+    buyer.proxyTopup{value: 1.1 ether}(address(prop), tokenId0);
+  }
+
+  function testToppingUpProperty() public {
+    uint256 startBlock = block.number;
+    uint256 collateral = 1 ether;
+    address beneficiary = address(1337);
+    Perwei memory taxRate = Perwei(1, 100, beneficiary);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+    assertEq(tokenId0, 0);
+
+    assertEq(block.number, startBlock);
+    vm.roll(block.number + 50);
+    assertEq(block.number, startBlock + 50);
+
+    (uint256 nextPrice0, uint256 taxes0) = prop.getPrice(tokenId0);
+    assertEq(nextPrice0, 0.5 ether);
+    assertEq(taxes0, 0.5 ether);
+    assertEq(beneficiary.balance, 0);
+    // collateral is: + 1 ether
+    //                - 0.5 ether taxes
+    //                ------------------
+    //                = 0.5 ether
+    prop.topup{value: 0.51 ether}(tokenId0);
+    // new            + 0.5 ether (after taxes)
+    //                + 0.51 ether from topup
+    //                --------------------------
+    //                = 1.01 ether
+    assertEq(beneficiary.balance, 0.5 ether);
+    (uint256 nextPrice1, uint256 taxes1) = prop.getPrice(tokenId0);
+    assertEq(nextPrice1, 1.01 ether);
+    assertEq(taxes1, 0);
+  }
+
+  function testToppingUpProperty2() public {
+    uint256 startBlock = block.number;
+    uint256 collateral = 1 ether;
+    address beneficiary = address(1337);
+    Perwei memory taxRate = Perwei(1, 100, beneficiary);
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+    assertEq(tokenId0, 0);
+
+    assertEq(block.number, startBlock);
+    vm.roll(block.number + 50);
+    assertEq(block.number, startBlock + 50);
+
+    (uint256 nextPrice0, uint256 taxes0) = prop.getPrice(tokenId0);
+    assertEq(nextPrice0, 0.5 ether);
+    assertEq(taxes0, 0.5 ether);
+
+    assertEq(beneficiary.balance, 0);
+    prop.topup{value: 2 ether}(tokenId0);
+
+    assertEq(beneficiary.balance, 0.5 ether);
+    (uint256 nextPrice1, uint256 taxes1) = prop.getPrice(tokenId0);
+    assertEq(nextPrice1, 2.5 ether);
+    assertEq(taxes1, 0);
   }
 
   function testMintProperty() public {
@@ -169,15 +267,21 @@ contract PluralPropertyTest is DSTest {
     );
 
     assertEq(startBlock, block.number);
-    assertEq(prop.getPrice(tokenId0), collateral);
+    (uint256 nextPrice0, uint256 taxes0) = prop.getPrice(tokenId0);
+    assertEq(nextPrice0, collateral);
+    assertEq(taxes0, 0);
 
     vm.roll(block.number+1);
     assertEq(startBlock+1, block.number);
-    assertEq(prop.getPrice(tokenId0), 0.99 ether);
+    (uint256 nextPrice1, uint256 taxes1) = prop.getPrice(tokenId0);
+    assertEq(nextPrice1, 0.99 ether);
+    assertEq(taxes1, 0.01 ether);
 
     vm.roll(block.number+1);
     assertEq(startBlock+2, block.number);
-    assertEq(prop.getPrice(tokenId0), 0.98 ether);
+    (uint256 nextPrice2, uint256 taxes2) = prop.getPrice(tokenId0);
+    assertEq(nextPrice2, 0.98 ether);
+    assertEq(taxes2, 0.02 ether);
   }
 
   function testGivingAwayOldProperty() public {
@@ -191,19 +295,27 @@ contract PluralPropertyTest is DSTest {
     );
 
     assertEq(startBlock, block.number);
-    assertEq(prop.getPrice(tokenId0), collateral);
+    (uint256 nextPrice0, uint256 taxes0) = prop.getPrice(tokenId0);
+    assertEq(nextPrice0, collateral);
+    assertEq(taxes0, 0);
 
     vm.roll(block.number+99);
     assertEq(startBlock+99, block.number);
-    assertEq(prop.getPrice(tokenId0), 0.01 ether);
+    (uint256 nextPrice1, uint256 taxes1) = prop.getPrice(tokenId0);
+    assertEq(nextPrice1, 0.01 ether);
+    assertEq(taxes1, 0.99 ether);
 
     vm.roll(block.number+1);
     assertEq(startBlock+100, block.number);
-    assertEq(prop.getPrice(tokenId0), 0);
+    (uint256 nextPrice2, uint256 taxes2) = prop.getPrice(tokenId0);
+    assertEq(nextPrice2, 0);
+    assertEq(taxes2, collateral);
 
     vm.roll(block.number+1);
     assertEq(startBlock+101, block.number);
-    assertEq(prop.getPrice(tokenId0), 0);
+    (uint256 nextPrice3, uint256 taxes3) = prop.getPrice(tokenId0);
+    assertEq(nextPrice3, 0);
+    assertEq(taxes3, collateral);
   }
 }
 

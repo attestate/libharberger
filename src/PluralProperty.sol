@@ -80,18 +80,18 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
 
   function getAssessment(
     uint256 tokenId
-  ) external view virtual returns (Assessment memory assessment) {
+  ) public view virtual returns (Assessment memory assessment) {
     require(_exists(tokenId), "getAssessment: token doesn't exist");
     assessment = _assessments[tokenId];
   }
 
   function getPrice(
     uint256 tokenId
-  ) external view virtual returns (uint256 price) {
+  ) external view virtual returns (uint256 price, uint256 taxes) {
     require(_exists(tokenId), "getPrice: token doesn't exist");
     Assessment memory assessment = _assessments[tokenId];
 
-    price = Harberger.getNextPrice(
+    (price, taxes) = Harberger.getNextPrice(
       assessment.taxRate,
       Period(assessment.startBlock, block.number),
       assessment.collateral
@@ -122,19 +122,44 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     return tokenId;
   }
 
-  function buy(
+  function _settleAssessment(
     uint256 tokenId
-  ) external virtual payable {
-    require(_exists(tokenId), "buy: token doesn't exist");
-    Assessment memory assessment = _assessments[tokenId];
-
-    uint256 nextPrice = Harberger.pay(
+  ) internal virtual returns (Assessment memory, uint256) {
+    Assessment memory assessment = getAssessment(tokenId);
+    (uint256 nextPrice, uint256 taxes) = Harberger.pay(
       assessment.taxRate,
       Period(assessment.startBlock, block.number),
       assessment.collateral
     );
 
     payable(assessment.seller).transfer(nextPrice);
+    payable(assessment.taxRate.beneficiary).transfer(taxes);
+
+    return (assessment, nextPrice);
+  }
+
+  function topup(uint256 tokenId) external virtual payable {
+    (
+      Assessment memory assessment,
+      uint256 nextPrice
+    ) = _settleAssessment(tokenId);
+    require(assessment.seller == msg.sender, "topup: only seller can topup");
+    Assessment memory nextAssessment = Assessment(
+      msg.sender,
+      block.number,
+      msg.value + nextPrice,
+      assessment.taxRate
+    );
+    _assessments[tokenId] = nextAssessment;
+  }
+
+  function buy(
+    uint256 tokenId
+  ) external virtual payable {
+    (
+      Assessment memory assessment,
+      uint256 nextPrice
+    ) = _settleAssessment(tokenId);
     Assessment memory nextAssessment = Assessment(
       msg.sender,
       block.number,
@@ -142,6 +167,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
       assessment.taxRate
     );
     _assessments[tokenId] = nextAssessment;
+
     _owners[tokenId] = msg.sender;
     emit Transfer(assessment.seller, msg.sender, tokenId);
   }
