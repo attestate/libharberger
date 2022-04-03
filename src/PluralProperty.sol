@@ -85,6 +85,20 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     assessment = _assessments[tokenId];
   }
 
+  function setTaxRate(uint256 tokenId, Perwei memory nextTaxRate) external {
+    Assessment memory assessment = getAssessment(tokenId);
+    require(
+      msg.sender == assessment.taxRate.beneficiary,
+      "setTaxRate: only beneficiary"
+    );
+    require(
+      nextTaxRate.beneficiary != address(0),
+      "setTaxRate: beneficiary not set"
+    );
+    assessment.taxRate = nextTaxRate;
+    _assessments[tokenId] = assessment;
+  }
+
   function getPrice(
     uint256 tokenId
   ) external view virtual returns (uint256 price, uint256 taxes) {

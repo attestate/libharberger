@@ -31,6 +31,15 @@ contract Buyer {
     HarbergerProperty prop = HarbergerProperty(propAddr);
     prop.withdraw(tokenId, amount);
   }
+
+  function proxySetTaxRate(
+    address propAddr,
+    uint256 tokenId,
+    Perwei memory nextTaxRate
+  ) public {
+    HarbergerProperty prop = HarbergerProperty(propAddr);
+    prop.setTaxRate(tokenId, nextTaxRate);
+  }
 }
 
 interface Vm {
@@ -370,6 +379,52 @@ contract PluralPropertyTest is DSTest {
       uri
     );
     assertEq(tokenId1, 1);
+  }
+
+  function testSettingTaxRate() public {
+    uint256 collateral = 1 ether;
+    Buyer buyer = new Buyer();
+    Perwei memory taxRate = Perwei(1, 100, address(buyer));
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+
+    Perwei memory nextTaxRate = Perwei(2, 100, address(buyer));
+    buyer.proxySetTaxRate(address(prop), tokenId0, nextTaxRate);
+    Assessment memory assessment = prop.getAssessment(tokenId0);
+    assertEq(assessment.taxRate.numerator, 2);
+    assertEq(assessment.taxRate.denominator, 100);
+    assertEq(assessment.taxRate.beneficiary, address(buyer));
+  }
+
+  function testFailSettingTaxRateToZeroAddress() public {
+    uint256 collateral = 1 ether;
+    Buyer buyer = new Buyer();
+    Perwei memory taxRate = Perwei(1, 100, address(buyer));
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+
+    Perwei memory nextTaxRate = Perwei(2, 100, address(0));
+    buyer.proxySetTaxRate(address(prop), tokenId0, nextTaxRate);
+  }
+
+  function testFailSettingTaxRateAsNonBeneficiary() public {
+    uint256 collateral = 1 ether;
+    Buyer buyer = new Buyer();
+    Perwei memory taxRate = Perwei(1, 100, address(this));
+    string memory uri = "https://example.com/metadata.json";
+    uint256 tokenId0 = prop.mint{value: collateral}(
+      taxRate,
+      uri
+    );
+
+    Perwei memory nextTaxRate = Perwei(2, 100, address(buyer));
+    buyer.proxySetTaxRate(address(prop), tokenId0, nextTaxRate);
   }
 
   function testGettingAssessment() public {
