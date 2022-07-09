@@ -2,9 +2,7 @@
 pragma solidity ^0.8.6;
 
 import {DSTest} from "ds-test/test.sol";
-import {IERC165} from "openzeppelin-contracts/utils/introspection/IERC165.sol";
 
-import {IERC721Metadata} from "./interfaces/IERC721Metadata.sol";
 import {PluralProperty, Assessment} from "./PluralProperty.sol";
 import {Perwei} from "./Harberger.sol";
 
@@ -54,11 +52,6 @@ contract PluralPropertyTest is DSTest {
     prop = new HarbergerProperty();
   }
   receive() external payable {}
-
-  function testInterfaceCompatability() public {
-    assertTrue(prop.supportsInterface(type(IERC165).interfaceId));
-    assertTrue(prop.supportsInterface(type(IERC721Metadata).interfaceId));
-  }
 
   function testCheckMetadata() public {
     assertEq(prop.name(), "Name");

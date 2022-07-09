@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.6;
 
-import {ERC165} from "openzeppelin-contracts/utils/introspection/ERC165.sol";
-import {IERC165} from "openzeppelin-contracts/utils/introspection/IERC165.sol";
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 import {Counters} from "openzeppelin-contracts/utils/Counters.sol";
 
-import {IERC721Metadata} from "./interfaces/IERC721Metadata.sol";
-import {IPluralProperty} from "./interfaces/IPluralProperty.sol";
 import {Perwei, Period, Harberger} from "./Harberger.sol";
+import {ERC4907} from "./ERC4907.sol";
 
 struct Assessment {
   address seller;
@@ -17,58 +14,19 @@ struct Assessment {
   Perwei taxRate;
 }
 
-abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
+abstract contract PluralProperty is ERC4907 {
   using Strings for uint256;
   using Counters for Counters.Counter;
 
   Counters.Counter private _tokenIds;
-  string private _name;
-  string private _symbol;
 
-  mapping(uint256 => address) private _owners;
   mapping(uint256 => Assessment) private _assessments;
   mapping(uint256 => string) private _tokenURIs;
 
   constructor(
     string memory name_,
     string memory symbol_
-  ) {
-    _name = name_;
-    _symbol = symbol_;
-  }
-
-  function supportsInterface(
-    bytes4 interfaceId
-  ) public view virtual override(ERC165) returns (bool) {
-    return
-      interfaceId == type(IERC721Metadata).interfaceId ||
-      super.supportsInterface(interfaceId);
-  }
-
-  function name() external view virtual override returns (string memory) {
-    return _name;
-  }
-
-  function symbol() external view virtual override returns (string memory) {
-    return _symbol;
-  }
-
-  function _exists(uint256 tokenId) internal view virtual returns (bool) {
-    return _owners[tokenId] != address(0);
-  }
-
-  function ownerOf(uint256 tokenId) external view virtual returns (address) {
-    address owner = _owners[tokenId];
-    require(owner != address(0), "ownerOf: token doesn't exist");
-    return owner;
-  }
-
-  function tokenURI(
-    uint256 tokenId
-  ) external view virtual override returns (string memory) {
-    require(_exists(tokenId), "tokenURI: token doesn't exist");
-    return _tokenURIs[tokenId];
-  }
+  ) ERC4907(name_, symbol_) {}
 
   function _setTokenURI(
     uint256 _tokenId,
@@ -76,6 +34,13 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
   ) internal virtual {
     require(_exists(_tokenId), "_setTokenURI: token doesn't exist");
     _tokenURIs[_tokenId] = _tokenURI;
+  }
+
+  function tokenURI(
+    uint256 tokenId
+  ) public view virtual override returns (string memory) {
+    require(_exists(tokenId), "tokenURI: token doesn't exist");
+    return _tokenURIs[tokenId];
   }
 
   function getAssessment(
@@ -120,9 +85,13 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     require(taxRate.beneficiary != address(0), "mint: beneficiary not set");
 
     uint256 tokenId = _tokenIds.current();
-    _owners[tokenId] = msg.sender;
+    _mint(address(this), tokenId);
     _setTokenURI(tokenId, uri);
     _tokenIds.increment();
+    // this errors as `setUser` assumes the transaction's caller to be the
+    // owner. So we probably have to restructure this contract somewhat and
+    // separate the auction house operator from the token itself.
+    setUser(tokenId, msg.sender, 0);
 
     Assessment memory assessment = Assessment(
       msg.sender,
@@ -132,7 +101,6 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     );
     _assessments[tokenId] = assessment;
 
-    emit Transfer(address(0), msg.sender, tokenId);
     return tokenId;
   }
 
@@ -207,7 +175,7 @@ abstract contract PluralProperty is ERC165, IERC721Metadata, IPluralProperty {
     );
     _assessments[tokenId] = nextAssessment;
 
-    _owners[tokenId] = msg.sender;
+    setUser(tokenId, msg.sender, 0);
     emit Transfer(assessment.seller, msg.sender, tokenId);
 
     payable(assessment.seller).transfer(nextPrice);
