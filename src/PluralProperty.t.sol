@@ -2,7 +2,7 @@
 pragma solidity ^0.8.6;
 
 import {DSTest} from "ds-test/test.sol";
-import {IERC165} from "openzeppelin-contracts/utils/introspection/IERC165.sol";
+import {IERC165} from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 
 import {IERC721Metadata} from "./interfaces/IERC721Metadata.sol";
 import {PluralProperty, Assessment} from "./PluralProperty.sol";

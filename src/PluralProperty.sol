@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.6;
 
-import {ERC165} from "openzeppelin-contracts/utils/introspection/ERC165.sol";
-import {IERC165} from "openzeppelin-contracts/utils/introspection/IERC165.sol";
-import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
-import {Counters} from "openzeppelin-contracts/utils/Counters.sol";
+import {ERC165} from "openzeppelin-contracts/contracts/utils/introspection/ERC165.sol";
+import {IERC165} from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
+import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
+import {Counters} from "openzeppelin-contracts/contracts/utils/Counters.sol";
 
 import {IERC721Metadata} from "./interfaces/IERC721Metadata.sol";
 import {IPluralProperty} from "./interfaces/IPluralProperty.sol";
