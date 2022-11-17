@@ -21,13 +21,13 @@
 With [dapptools](https://github.com/dapphub/dapptools):
 
 ```bash
-dapp install rugpullindex/libharberger
+dapp install attestate/libharberger
 ```
 
 Or [foundry](https://github.com/gakonst/foundry):
 
 ```
-forge install rugpullindex/libharberger
+forge install attestate/libharberger
 ```
 
 ## Usage
